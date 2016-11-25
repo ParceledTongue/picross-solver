@@ -1,8 +1,6 @@
 import timeit
-
-EMPTY = 0
-FILLED = 1
-UNKNOWN = 2
+import constants as c
+import possibilities as p
 
 settings = {
     'print_possibility_calcs': False,
@@ -25,22 +23,23 @@ def solve(hints):
 
     board = []
     for i in range(height):
-        board.append([UNKNOWN] * width)
+        board.append([c.UNKNOWN] * width)
     
     for i in range(height):
+        hint = hints['rows'][i]
         key = 'r' + str(i)
-        valid_lines[key] = find_valid_lines(hints['rows'][i], width)
+        valid_lines[key] = p.find_valid_lines(hint, width)
         if settings['print_possibility_calcs']:
             print('Calculated possibilities for ' + key)
 
     for j in range(width):
+        hint = hints['columns'][j]
         key = 'c' + str(j)
-        valid_lines[key] = find_valid_lines(hints['columns'][j], height)    
+        valid_lines[key] = p.find_valid_lines(hint, height)
         if settings['print_possibility_calcs']:
             print('Calculated possibilities for ' + key)
     
     exit = False
-
     while not exit:
         for i in range(height):
             if exit:
@@ -61,6 +60,7 @@ def solve(hints):
             exit = is_solved_shortcut(solved_rows, solved_columns)
 
             if settings['print_steps']:
+                print('Step ' + str(step) + ':')
                 print_board(board)
                 print
 
@@ -94,19 +94,6 @@ def solve(hints):
     print
     return board
 
-def is_solved(board, hints):
-    width = len(hints['columns'])
-    height = len(hints['rows'])
-
-    for i in range(height):
-        if not is_valid_line(get_row_copy(board, i), hints['rows'][i]):
-            return False
-    for j in range(width):
-        if not is_valid_line(get_column_copy(board, j), hints['columns'][j]):
-            return False
-
-    return True
-
 def is_solved_shortcut(solved_rows, solved_columns):
     for row in solved_rows:
         if not row:
@@ -126,19 +113,19 @@ def get_column_copy(board, j):
 
 def apply_row(board, row, i):
     for j in range(len(row)):
-        if board[i][j] == UNKNOWN:
+        if board[i][j] == c.UNKNOWN:
             board[i][j] = row[j]
 
 def apply_column(board, column, j):
     for i in range(len(board)):
-        if board[i][j] == UNKNOWN:
+        if board[i][j] == c.UNKNOWN:
             board[i][j] = column[i]
 
 def reduce_valid_lines(known_line, valid_lines):
     to_remove = []
     for line in valid_lines:
         for i in range(len(known_line)):
-            if not known_line[i] == UNKNOWN and not line[i] == known_line[i]:
+            if not known_line[i] == c.UNKNOWN and not line[i] == known_line[i]:
                 to_remove.append(line)
                 break
     
@@ -147,82 +134,26 @@ def reduce_valid_lines(known_line, valid_lines):
 
 def find_definite_line(valid_lines):
     dim = len(valid_lines[0])
-    definite_line = [UNKNOWN] * dim
+    definite_line = [c.UNKNOWN] * dim
     
     definite_filled = [True] * dim
     definite_empty = [True] * dim
     for line in valid_lines:
         for i in range(dim):
-            definite_filled[i] = definite_filled[i] and line[i] == FILLED
-            definite_empty[i] = definite_empty[i] and line[i] == EMPTY
+            definite_filled[i] = definite_filled[i] and line[i] == c.FILLED
+            definite_empty[i] = definite_empty[i] and line[i] == c.EMPTY
 
     for i in range(dim):
-        if definite_filled[i]: definite_line[i] = FILLED
-        elif definite_empty[i]: definite_line[i] = EMPTY
+        if definite_filled[i]: definite_line[i] = c.FILLED
+        elif definite_empty[i]: definite_line[i] = c.EMPTY
 
     return definite_line
-
-def find_valid_lines(hint, dim):
-    num = sum(hint)
-    valid_lines = []
-
-    filled_positions = []
-    for i in range(num):
-        filled_positions.append(i)
-    
-    while filled_positions[0] < dim - num:
-        line = positions_to_line(filled_positions, dim)
-        if is_valid_line(line, hint) and line not in valid_lines:
-            valid_lines.append(line)
-
-        filled_positions[-1] += 1
-        
-        place = num - 1
-        while filled_positions[place] == dim - (num - place) + 1:
-            place -= 1
-            filled_positions[place] += 1
-        filled_positions = filled_positions[0:place+1]
-        while len(filled_positions) < num:
-            filled_positions.append(filled_positions[-1] + 1)
-    
-    line = positions_to_line(filled_positions, dim)
-    if is_valid_line(line, hint):
-        valid_lines.append(line)
-
-    return valid_lines
-
-def positions_to_line(positions, dim):
-    line = [EMPTY] * dim
-    for p in positions:
-        line[p] = FILLED
-
-    return line
-
-def is_valid_line(line, hint):
-    line = line[:]
-    hint = hint[:]
-
-    line.insert(0, EMPTY)
-    hint_index = -1
-    for i in range(len(line))[1:]:
-        if line[i] == FILLED:
-            if line[i - 1] == EMPTY:
-                hint_index += 1
-                if hint_index > len(hint) - 1:
-                    return False
-            hint[hint_index] -= 1
-
-    for n in hint:
-        if n != 0:
-            return False
-
-    return True
 
 def print_board(board):
     for row in board:
         row_string = ''
         for cell in row:
-            if cell == FILLED: row_string += 'X '
-            elif cell == EMPTY: row_string += '- '
+            if cell == c.FILLED: row_string += 'X '
+            elif cell == c.EMPTY: row_string += '- '
             else: row_string += '  '
         print(row_string)

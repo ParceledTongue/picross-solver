@@ -1,4 +1,4 @@
-ex = {
+small = {
     'rows': [
         [8, 1],
         [3, 4, 1],
@@ -129,7 +129,7 @@ snowflake = {
     ]
 }
 
-online = {
+swan = {
     'rows': [
         [2, 9],
         [2, 8],
