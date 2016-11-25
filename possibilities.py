@@ -1,6 +1,9 @@
 import constants as c
 
 def find_valid_lines(hint, dim):
+    if hint == [0]:
+        return [[c.EMPTY] * dim]
+
     valid_lines = []
     
     arrangement = {}

@@ -1,4 +1,6 @@
+import operator
 import timeit
+import sys
 import constants as c
 import possibilities as p
 
@@ -17,7 +19,6 @@ def solve(hints):
 
     solved_rows = [False] * height
     solved_columns = [False] * width
-    is_solved = False
 
     valid_lines = {}
     valid_lines_bank = {} # for memoization
@@ -45,54 +46,60 @@ def solve(hints):
         valid_lines[key] = valid_lines_bank[bank_key][:]
         if settings['print_possibility_calcs']:
             print('Calculated possibilities for ' + key)
+
+    considering = valid_lines.keys()
     
-    exit = False
-    while not exit:
-        for i in range(height):
-            if exit:
-                break
+    while not is_solved(solved_rows, solved_columns):
+        if not considering:
+            print('Giving up :(')
+            return None
+        considering = sorted(considering, key = lambda x: len(valid_lines[x]))
 
-            if solved_rows[i]:
-                continue
-            
-            current_row = get_row_copy(board, i)
-            key = 'r' + str(i)
-            current_valid_lines = valid_lines[key]
-            reduce_valid_lines(current_row, current_valid_lines)
-            apply_row(board, find_definite_line(current_valid_lines), i)
+        for key in considering:
             steps += 1
 
-            if len(current_valid_lines) == 1:
-                solved_rows[i] = True
-            exit = is_solved_shortcut(solved_rows, solved_columns)
-
             if settings['print_steps']:
-                print('Step ' + str(steps) + ':')
-                print_board(board)
-                print
-
-        for j in range(width):
-            if exit:
-                break
-
-            if solved_columns[j]:
-                continue
-
-            current_column = get_column_copy(board, j)
-            key = 'c' + str(j)
-            current_valid_lines = valid_lines[key]
-            reduce_valid_lines(current_column, current_valid_lines)
-            apply_column(board, find_definite_line(current_valid_lines), j)
-            steps += 1
+                print('Step ' + str(steps))
+                print('  Examining ' + key)
+                print('  ' + str(len(valid_lines[key])) + ' valid lines')
+                print('  Queue is ' + str(considering[:5]) + '...')
             
+            if key[0] == 'r':
+                getter = get_row_copy
+                setter = apply_row
+                tracker = solved_rows
+                other_tracker = solved_columns
+                to_consider_pre = 'c'
+            else:
+                getter = get_column_copy
+                setter = apply_column
+                tracker = solved_columns
+                other_tracker = solved_rows
+                to_consider_pre = 'r'
+            index = int(key[1:])
+
+            current_line = getter(board, index)
+            current_valid_lines = valid_lines[key]
+            reduce_valid_lines(current_line, current_valid_lines)
+            changed = setter(board, find_definite_line(current_valid_lines), index)
+            
+            if changed:
+                update_solved(board, solved_rows, solved_columns)
+            for i in changed:
+                to_consider_key = to_consider_pre + str(i)
+                if to_consider_key not in considering and not other_tracker[i]:
+                    considering.append(to_consider_key)
+
+            considering.remove(key)
+
             if len(current_valid_lines) == 1:
-                solved_columns[j] = True
-            exit = is_solved_shortcut(solved_rows, solved_columns)
+                tracker[index] = True
 
             if settings['print_steps']:
-                print('Step ' + str(steps) + ':')
                 print_board(board)
                 print
+            if changed:
+                break
 
     stop = timeit.default_timer()
 
@@ -102,7 +109,26 @@ def solve(hints):
     print
     return board
 
-def is_solved_shortcut(solved_rows, solved_columns):
+def update_solved(board, solved_rows, solved_columns):
+    for i in range(len(solved_rows)):
+        if not solved_rows[i]:
+            solved = True
+            for cell in get_row_copy(board, i):
+                if cell == c.UNKNOWN:
+                    solved = False
+                    break
+            if solved: solved_rows[i] = True
+
+    for j in range(len(solved_columns)):
+        if not solved_columns[i]:
+            solved = True
+            for cell in get_column_copy(board, j):
+                if cell == c.UNKNOWN:
+                    solved = False
+                    break
+            if solved: solved_columns[j] = True
+
+def is_solved(solved_rows, solved_columns):
     for row in solved_rows:
         if not row:
             return False
@@ -119,26 +145,33 @@ def get_row_copy(board, i):
 def get_column_copy(board, j):
     return [row[j] for row in board]
 
+# Apply functions return list of changed indices
+
 def apply_row(board, row, i):
+    changed = []
     for j in range(len(row)):
-        if board[i][j] == c.UNKNOWN:
+        if board[i][j] == c.UNKNOWN and not row[j] == c.UNKNOWN:
             board[i][j] = row[j]
+            changed.append(j)
+    return changed
 
 def apply_column(board, column, j):
+    changed = []
     for i in range(len(board)):
-        if board[i][j] == c.UNKNOWN:
+        if board[i][j] == c.UNKNOWN and not column[i] == c.UNKNOWN:
             board[i][j] = column[i]
+            changed.append(i)
+    return changed
 
-def reduce_valid_lines(known_line, valid_lines):
-    to_remove = []
-    for line in valid_lines:
-        for i in range(len(known_line)):
-            if not known_line[i] == c.UNKNOWN and not line[i] == known_line[i]:
-                to_remove.append(line)
-                break
-    
-    for line in to_remove:
-        valid_lines.remove(line)
+def reduce_valid_lines(known_line, valid_lines): 
+    valid_lines[:] = [line for line in valid_lines if is_valid(known_line, line)]
+
+def is_valid(known_line, line):
+    for i in range(len(known_line)):
+        if not known_line[i] == c.UNKNOWN and not line[i] == known_line[i]:
+            return False
+    return True
+
 
 def find_definite_line(valid_lines):
     dim = len(valid_lines[0])
