@@ -1,37 +1,25 @@
+import timeit
+
 EMPTY = 0
 FILLED = 1
 UNKNOWN = 2
 
-ex_hints = {
-    'rows': [
-        [8, 1],
-        [3, 4, 1],
-        [8, 1],
-        [1, 6],
-        [1, 1, 2],
-        [1, 2],
-        [1, 1],
-        [4],
-        [3],
-        [1]
-    ],
-    'columns': [
-        [5],
-        [3],
-        [3],
-        [1, 1],
-        [4],
-        [4],
-        [8],
-        [4, 3],
-        [3, 2],
-        [9]
-    ]
+settings = {
+    'print_possibility_calcs': False,
+    'print_steps': False
 }
 
 def solve(hints):
+    start = timeit.default_timer()
+
     width = len(hints['columns'])
     height = len(hints['rows'])
+
+    steps = 0
+
+    solved_rows = [False] * height
+    solved_columns = [False] * width
+    is_solved = False
 
     valid_lines = {}
 
@@ -42,29 +30,69 @@ def solve(hints):
     for i in range(height):
         key = 'r' + str(i)
         valid_lines[key] = find_valid_lines(hints['rows'][i], width)
+        if settings['print_possibility_calcs']:
+            print('Calculated possibilities for ' + key)
 
     for j in range(width):
         key = 'c' + str(j)
         valid_lines[key] = find_valid_lines(hints['columns'][j], height)    
+        if settings['print_possibility_calcs']:
+            print('Calculated possibilities for ' + key)
+    
+    exit = False
 
-    while not is_solved(board, hints):
+    while not exit:
         for i in range(height):
+            if exit:
+                break
+
+            if solved_rows[i]:
+                continue
+            
             current_row = get_row_copy(board, i)
             key = 'r' + str(i)
-            print(key)
             current_valid_lines = valid_lines[key]
             reduce_valid_lines(current_row, current_valid_lines)
             apply_row(board, find_definite_line(current_valid_lines), i)
-            print_board(board)
+            steps += 1
+
+            if len(current_valid_lines) == 1:
+                solved_rows[i] = True
+            exit = is_solved_shortcut(solved_rows, solved_columns)
+
+            if settings['print_steps']:
+                print_board(board)
+                print
 
         for j in range(width):
+            if exit:
+                break
+
+            if solved_columns[j]:
+                continue
+
             current_column = get_column_copy(board, j)
             key = 'c' + str(j)
-            print(key)
             current_valid_lines = valid_lines[key]
             reduce_valid_lines(current_column, current_valid_lines)
             apply_column(board, find_definite_line(current_valid_lines), j)
-            print_board(board)
+            steps += 1
+            
+            if len(current_valid_lines) == 1:
+                solved_columns[j] = True
+            exit = is_solved_shortcut(solved_rows, solved_columns)
+
+            if settings['print_steps']:
+                print_board(board)
+                print
+
+    stop = timeit.default_timer()
+
+    print_board(board)
+    print('Steps: ' + str(steps))
+    print('Time: ' + str(stop - start) + ' sec')
+    print
+    return board
 
 def is_solved(board, hints):
     width = len(hints['columns'])
@@ -75,6 +103,17 @@ def is_solved(board, hints):
             return False
     for j in range(width):
         if not is_valid_line(get_column_copy(board, j), hints['columns'][j]):
+            return False
+
+    return True
+
+def is_solved_shortcut(solved_rows, solved_columns):
+    for row in solved_rows:
+        if not row:
+            return False
+
+    for column in solved_columns:
+        if not column:
             return False
 
     return True
@@ -187,4 +226,3 @@ def print_board(board):
             elif cell == EMPTY: row_string += '- '
             else: row_string += '  '
         print(row_string)
-    print
