@@ -20,6 +20,7 @@ def solve(hints):
     is_solved = False
 
     valid_lines = {}
+    valid_lines_bank = {} # for memoization
 
     board = []
     for i in range(height):
@@ -28,14 +29,20 @@ def solve(hints):
     for i in range(height):
         hint = hints['rows'][i]
         key = 'r' + str(i)
-        valid_lines[key] = p.find_valid_lines(hint, width)
+        bank_key = str([hint, width])
+        if not bank_key in valid_lines_bank:
+            valid_lines_bank[bank_key] = p.find_valid_lines(hint, width)
+        valid_lines[key] = valid_lines_bank[bank_key][:]
         if settings['print_possibility_calcs']:
             print('Calculated possibilities for ' + key)
 
     for j in range(width):
         hint = hints['columns'][j]
         key = 'c' + str(j)
-        valid_lines[key] = p.find_valid_lines(hint, height)
+        bank_key = str([hint, height])
+        if not bank_key in valid_lines_bank:
+            valid_lines_bank[bank_key] = p.find_valid_lines(hint, height)
+        valid_lines[key] = valid_lines_bank[bank_key][:]
         if settings['print_possibility_calcs']:
             print('Calculated possibilities for ' + key)
     
@@ -60,7 +67,7 @@ def solve(hints):
             exit = is_solved_shortcut(solved_rows, solved_columns)
 
             if settings['print_steps']:
-                print('Step ' + str(step) + ':')
+                print('Step ' + str(steps) + ':')
                 print_board(board)
                 print
 
@@ -83,6 +90,7 @@ def solve(hints):
             exit = is_solved_shortcut(solved_rows, solved_columns)
 
             if settings['print_steps']:
+                print('Step ' + str(steps) + ':')
                 print_board(board)
                 print
 
