@@ -1,5 +1,7 @@
 import constants as c
 
+# Take in a single-line hint and the line's dimension, and return an array
+# containing all valid lines for that hint-dimension pair.
 def find_valid_lines(hint, dim):
     if hint == [0]:
         return [[c.EMPTY] * dim]
@@ -28,6 +30,8 @@ def find_valid_lines(hint, dim):
 
     return valid_lines
 
+# Take in an "arrangement" (as used in find_valid_lines) and convert it to the
+# standard array representation for the corresponding line.
 def arrangement_to_line(arrangement, dim):
     line = [c.EMPTY] * dim
     pos = 0

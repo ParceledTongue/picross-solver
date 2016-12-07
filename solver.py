@@ -27,6 +27,7 @@ def solve(hints):
     for i in range(height):
         board.append([c.UNKNOWN] * width)
     
+    # Calculate possible lines for all rows
     for i in range(height):
         hint = hints['rows'][i]
         key = 'r' + str(i)
@@ -37,6 +38,7 @@ def solve(hints):
         if settings['print_possibility_calcs']:
             print('Calculated possibilities for ' + key)
 
+    # Calculate possible lines for all columns
     for j in range(width):
         hint = hints['columns'][j]
         key = 'c' + str(j)
@@ -109,6 +111,9 @@ def solve(hints):
     print
     return board
 
+# Modify solved_rows and solved_columns to accurately reflect the state of the
+# board passed in. This is kind of an ugly mix of functional and data-driven
+# style and should probably be refactored.
 def update_solved(board, solved_rows, solved_columns):
     for i in range(len(solved_rows)):
         if not solved_rows[i]:
@@ -172,7 +177,8 @@ def is_valid(known_line, line):
             return False
     return True
 
-
+# Return all the knowledge we have of a line based on the current set of valid
+# lines.
 def find_definite_line(valid_lines):
     dim = len(valid_lines[0])
     definite_line = [c.UNKNOWN] * dim
