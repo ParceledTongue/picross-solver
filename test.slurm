@@ -7,4 +7,4 @@ echo $nproc cores available
 cp -r src puzzles makefile $PFSDIR/.
 cd $PFSDIR
 make
-ls
+./bin/solver puzzles/birds.txt
