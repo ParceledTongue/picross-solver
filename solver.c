@@ -36,10 +36,10 @@ typedef struct {
 } LineList;
 
 typedef struct {
-    int numRows;
-    int numCols;
-    LineList *rowLists;
-    LineList *colLists;
+    int num_rows;
+    int num_cols;
+    LineList **row_lists;
+    LineList **col_lists;
 } Board;
 
 /* === LINE MANIPULATION AND ACCESS === */
@@ -197,6 +197,40 @@ void linelist_free(LineList *linelist) {
     free(linelist);
 }
 
+/* === BOARD MANIPULATION AND ACCESS === */
+
+/*
+void board_init_row_list(Board *board, int row, LineList *row_list) {
+    LineList *cp = &board->row_lists[row];
+    cp = row_list;
+}
+
+void board_init_col_list(Board *board, int col, LineList *col_list) {
+    LineList *cp = &board->col_lists[col];
+    cp = col_list;
+}
+*/
+
+Board *board_init(int num_rows, int num_cols) {
+    Board *board = malloc(sizeof(Board));
+    board->num_rows = num_rows;
+    board->num_cols = num_cols;
+    board->row_lists = malloc(num_rows * sizeof(LineList));
+    board->col_lists = malloc(num_cols * sizeof(LineList));
+    return board;
+}
+
+void board_free(Board *board) {
+    int i;
+    for (i = 0; i < board->num_rows; i++) 
+        linelist_free(board->row_lists[i]);
+    for (i = 0; i < board->num_cols; i++)
+        linelist_free(board->col_lists[i]);
+    free(board->row_lists);
+    free(board->col_lists);
+    free(board);
+}
+
 /* === FIND ALL POSSIBLE SOLUTIONS FOR GIVEN HINT === */
 
 LineList *generate_segments(LineList *runs, int runs_size, int spaces) {
@@ -264,19 +298,131 @@ LineList *get_valid_lines(int *hint, int hint_size, int dim) {
     return valid_lines;
 }
 
+/* === REDUCTION === */
+
+typedef struct {
+    Line *common_filled;
+    Line *common_empty;
+} CommonInfo;
+
+CommonInfo *commoninfo_init(int dim) {
+    CommonInfo *info = malloc(sizeof(CommonInfo));
+    info->common_filled = line_init(dim);
+    info->common_empty = line_init(dim);
+    line_compliment(info->common_filled);
+    return info;
+}
+
+void commoninfo_free(CommonInfo *info) {
+    line_free(info->common_filled);
+    line_free(info->common_empty);
+    free(info);
+}
+
+CommonInfo *get_common(LineList *lines, int dim) {
+    CommonInfo *info = commoninfo_init(dim);
+    LineNode *current_node = lines->first;
+    while (current_node != NULL) {
+        line_and(info->common_filled, current_node->line);
+        line_or(info->common_empty, current_node->line);
+        current_node = current_node->next;
+    }
+    return info;
+}
+
+int reduce(LineList **a, int a_size, LineList **b, int b_size) {
+    int i, j, num_removed = 0;
+
+    for (i = 0; i < a_size; i++) {
+        CommonInfo *info = get_common(a[i], b_size);
+        # pragma omp parallel for reduction(+:num_removed)
+        for (j = 0; j < b_size; j++) {
+            LineNode *current_node = b[j]->first;
+            while (current_node != NULL) {
+                LineNode *next_node = current_node->next;
+                if ((line_get(info->common_filled, j) && !line_get(current_node->line, i)) || (!line_get(info->common_empty, j) && line_get(current_node->line, i))) {
+                    linelist_remove(b[j], current_node);
+                    num_removed++;
+                }
+                current_node = next_node;
+            }
+            if (b[j]->first == NULL)
+                return -1; // no solution
+        }
+        commoninfo_free(info);
+    }
+
+    return num_removed;
+}
+
+int reduce_mutual(Board *board) {
+    int cols_removed = reduce(board->row_lists, board->num_rows, board->col_lists, board->num_cols);
+    if (cols_removed == -1) return -1; // no solution
+    
+    int rows_removed = reduce(board->col_lists, board->num_cols, board->row_lists, board->num_rows);
+    if (rows_removed == -1) return -1; // no solution
+
+    return cols_removed + rows_removed;
+}
+
 /* === MAIN === */
 
 int main() {
 
-    int hint_length = 3;
+    Board *board = board_init(3, 3);
+    
+    int hint_length = 1;
+    int *hint1, *hint2, *hint3, *hint4, *hint5, *hint6;
+    
+    hint1 = malloc(hint_length * sizeof(int));
+    hint1[0] = 2;
+    board->row_lists[0] = get_valid_lines(hint1, hint_length, 3);
+
+    hint2 = malloc(hint_length * sizeof(int));
+    hint2[0] = 1;
+    board->row_lists[1] = get_valid_lines(hint2, hint_length, 3);
+
+    hint3 = malloc(hint_length * sizeof(int));
+    hint3[0] = 1;
+    board->row_lists[2] = get_valid_lines(hint3, hint_length, 3);
+
+    hint4 = malloc(hint_length * sizeof(int));
+    hint4[0] = 0;
+    board->col_lists[0] = get_valid_lines(hint4, hint_length, 3);
+
+    hint5 = malloc(hint_length * sizeof(int));
+    hint5[0] = 1;
+    board->col_lists[1] = get_valid_lines(hint5, hint_length, 3);
+
+    hint6 = malloc(hint_length * sizeof(int));
+    hint6[0] = 3;
+    board->col_lists[2] = get_valid_lines(hint6, hint_length, 3);
+
+    // main loop
+    int total_changed;
+    do {
+        total_changed = reduce_mutual(board);
+        if (total_changed == -1) {
+            printf("Failed to find a solution.\n");
+            return;
+        }
+    } while (total_changed > 0);
+
+    int i;
+    for (i = 0; i < board->num_rows; i++) {
+        line_print(board->row_lists[i]->first->line);
+        printf("\n");
+    }
+
+    /*
+    int hint_length = 2;
     int *hint = malloc(hint_length * sizeof(int));
-    hint[0] = 1;
+    hint[0] = 2;
     hint[1] = 2;
-    hint[2] = 44;
-    LineList *valid_lines = get_valid_lines(hint, hint_length, 50);
-    linelist_print(valid_lines);
-    // line_shift_left(valid_lines->first->line);
-    // line_print(valid_lines->first->line);
+    LineList *valid_lines = get_valid_lines(hint, hint_length, 5);
+    CommonInfo *info = get_common(valid_lines, 5);
+    line_print(info->common_empty);
+    */
     
     /*
     LineList *runs = linelist_init();
@@ -306,7 +452,8 @@ int main() {
     w[0] &= ~(~0 << 1);
     // printf("%" PRIu32 "\n", w[0]);
     */
-
+    
+    // board_free(board);
     printf("\n");
 
     return 0;
