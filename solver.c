@@ -403,12 +403,12 @@ Hints *hints_init(int num_rows, int num_cols) {
 
 void hints_free(Hints *hints) {
     int i;
-    for (i = 0; i < hints->num_rows; i++) {
+    for (i = 0; i < hints->num_rows; i++)
         hint_free(hints->row_hints[i]);
-        printf("sc\n");
-    }
     for (i = 0; i < hints->num_cols; i++)
         hint_free(hints->col_hints[i]);
+    free(hints->row_hints);
+    free(hints->col_hints);
     free(hints);
 }
 
@@ -438,13 +438,14 @@ Hints *read_hints(const char *filepath) {
             p = strtok(NULL, " ");
         }
         Hint *hint = hint_init(size);
-        hint->size = size;
         for (i = 0; i < size; i++)
             hint->hint[i] = hint_buffer[i];
+
         if (num_read < num_rows)
             hints->row_hints[num_read] = hint;
         else
             hints->col_hints[num_read - num_rows] = hint;
+        num_read++;
     }
 
     fclose(file);
@@ -454,13 +455,12 @@ Hints *read_hints(const char *filepath) {
 /* === MAIN === */
 
 int main() {
-    Hints *h = hints_init(5, 5);
-    hints_free(h);
+    // Hints *h = hints_init(5, 5);
+    // hints_free(h);
 
     Hints *hints = read_hints("duck.txt");
-    printf("%d %d\n", hints->num_rows, hints->num_cols);
 
-    // printf("%d\n", hints->col_hints[14]->hint[2]);
+    printf("%d\n", hints->col_hints[13]->hint[1]);
 
     Board *board = board_init(3, 3);
     
