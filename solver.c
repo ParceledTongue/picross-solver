@@ -6,6 +6,7 @@
  * stackoverflow.com/questions/2633400/c-c-efficient-bit-array. 
  */
 
+#include <ctype.h>
 #include <inttypes.h>
 #include <string.h>
 #include <stdbool.h>
@@ -41,6 +42,18 @@ typedef struct {
     LineList **row_lists;
     LineList **col_lists;
 } Board;
+
+typedef struct {
+    int *hint;
+    int size;
+} Hint;
+
+typedef struct {
+    int num_rows;
+    int num_cols;
+    Hint **row_hints;
+    Hint **col_hints;
+} Hints;
 
 /* === LINE MANIPULATION AND ACCESS === */
 
@@ -215,8 +228,8 @@ Board *board_init(int num_rows, int num_cols) {
     Board *board = malloc(sizeof(Board));
     board->num_rows = num_rows;
     board->num_cols = num_cols;
-    board->row_lists = malloc(num_rows * sizeof(LineList));
-    board->col_lists = malloc(num_cols * sizeof(LineList));
+    board->row_lists = malloc(num_rows * sizeof(LineList*));
+    board->col_lists = malloc(num_cols * sizeof(LineList*));
     return board;
 }
 
@@ -365,9 +378,89 @@ int reduce_mutual(Board *board) {
     return cols_removed + rows_removed;
 }
 
+/* === HINTS (AND HINT) MANIPULATION AND ACCESS === */
+
+Hint *hint_init(int size) {
+    Hint *hint = malloc(sizeof(Hint));
+    hint->size = size;
+    hint->hint = malloc(size * sizeof(int));
+    return hint;
+}
+
+void hint_free(Hint *hint) {
+    free(hint->hint);
+    free(hint);
+}
+
+Hints *hints_init(int num_rows, int num_cols) {
+    Hints *hints = malloc(sizeof(Hints));
+    hints->num_rows = num_rows;
+    hints->num_cols = num_cols;
+    hints->row_hints = malloc(num_rows * sizeof(Hint*));
+    hints->col_hints = malloc(num_cols * sizeof(Hint*));
+    return hints;
+}
+
+void hints_free(Hints *hints) {
+    int i;
+    for (i = 0; i < hints->num_rows; i++) {
+        hint_free(hints->row_hints[i]);
+        printf("sc\n");
+    }
+    for (i = 0; i < hints->num_cols; i++)
+        hint_free(hints->col_hints[i]);
+    free(hints);
+}
+
+/* === READ TEXT FILE INTO HINTS STRUCT === */
+
+Hints *read_hints(const char *filepath) {
+    FILE *file = fopen(filepath, "r");
+    char line[256];
+    
+    int num_rows;
+    int num_cols;
+    fgets(line, sizeof(line), file);
+    sscanf(line, "%d %d", &num_rows, &num_cols);
+
+    Hints *hints = hints_init(num_rows, num_cols);
+    
+    int num_read = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        if (!isdigit(line[0])) continue; // ignore non-digit lines
+        int i, size = 0;
+        int hint_buffer[50];
+        // set up buffer
+        char *p = strtok(line, " ");
+        while (p != NULL) {
+            hint_buffer[size++] = atoi(p);
+            p = strtok(NULL, " ");
+        }
+        Hint *hint = hint_init(size);
+        hint->size = size;
+        for (i = 0; i < size; i++)
+            hint->hint[i] = hint_buffer[i];
+        if (num_read < num_rows)
+            hints->row_hints[num_read] = hint;
+        else
+            hints->col_hints[num_read - num_rows] = hint;
+    }
+
+    fclose(file);
+    return hints;
+}
+
 /* === MAIN === */
 
 int main() {
+    Hints *h = hints_init(5, 5);
+    hints_free(h);
+
+    Hints *hints = read_hints("duck.txt");
+    printf("%d %d\n", hints->num_rows, hints->num_cols);
+
+    // printf("%d\n", hints->col_hints[14]->hint[2]);
 
     Board *board = board_init(3, 3);
     
@@ -452,8 +545,9 @@ int main() {
     w[0] &= ~(~0 << 1);
     // printf("%" PRIu32 "\n", w[0]);
     */
-    
-    // board_free(board);
+   
+    hints_free(hints);
+    board_free(board);
     printf("\n");
 
     return 0;
