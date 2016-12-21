@@ -6,6 +6,8 @@
  * stackoverflow.com/questions/2633400/c-c-efficient-bit-array. 
  */
 
+#include <inttypes.h>
+#include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -76,8 +78,17 @@ bool line_get(Line *line, int index) {
     return line->words[bindex(index)] & (1 << boffset(index));
 }
 
+void line_compliment(Line *line) {
+    int i, num_words = line->size / BITS_PER_WORD + 1;
+    for (i = 0; i < num_words; i++) {
+        line->words[i] = ~(line->words[i]);
+        if (i == num_words - 1)
+            line->words[i] &= ~(~0 << (line->size % BITS_PER_WORD));
+    }
+}
+
 void line_or(Line *line1, Line *line2) {
-    int i, num_words = line1->size / BITS_PER_WORD + 1;
+    int i, num_words = line2->size / BITS_PER_WORD + 1;
     for (i = 0; i < num_words; i++) {
         line1->words[i] |= line2->words[i];
     }
@@ -90,6 +101,15 @@ void line_and(Line *line1, Line *line2) {
     }
 }
 
+void line_shift_left(Line *line) {
+    int i, num_words = line->size / BITS_PER_WORD + 1;
+    for (i = 0; i < num_words; i++) {
+        line->words[i] >>= 1;
+        if (i < num_words - 1)
+            line->words[i] |= (line->words[i + 1] << (BITS_PER_WORD - 1));
+    }
+}
+
 void line_shift_right(Line *line) {
     int i, num_words = line->size / BITS_PER_WORD + 1;
     for (i = num_words - 1; i >= 0; i--) {
@@ -97,6 +117,20 @@ void line_shift_right(Line *line) {
         if (i > 0)
             line->words[i] |= (line->words[i - 1] >> (BITS_PER_WORD - 1));
     }
+}
+
+// return new line which is the concatenation of the two inputs
+Line *line_concat(Line *line1, Line *line2) {
+    int i, new_size = line1->size + line2->size;
+    Line *result = line_init(new_size);
+    Line *flag = line_init(new_size);
+    line_or(result, line1);
+    line_or(flag, line2);
+    for (i = 0; i < line1->size; i++)
+        line_shift_right(flag); // TODO would be good if this could take shamt
+    line_or(result, flag);
+    line_free(flag);
+    return result;
 }
 
 void line_print(Line *line) {
@@ -165,16 +199,36 @@ void linelist_free(LineList *linelist) {
 
 /* === FIND ALL POSSIBLE SOLUTIONS FOR GIVEN HINT === */
 
-int ipow(int base, int exp) {
-    int result = 1;
-    while (exp) {
-        if (exp & 1)
-            result *= base;
-        exp >>= 1;
-        base *= base;
+LineList *generate_segments(LineList *runs, int runs_size, int spaces) {
+    // printf("runs_size = %d, spaces = %d\n", runs_size, spaces);
+    
+    LineList *segments = linelist_init();
+    
+    if (runs_size == 0) {
+        linelist_append(segments, line_init(spaces));
+        return segments;
     }
 
-    return result;
+    int lead_spaces;
+    for (lead_spaces = 1; lead_spaces <= spaces - runs_size + 1; lead_spaces++) {
+        LineList *reduced_runs = linelist_init();
+        reduced_runs->first = runs->first->next;
+        reduced_runs->last = (runs_size == 1) ? NULL : runs->last;
+        LineList *tails = generate_segments(reduced_runs, runs_size - 1, spaces - lead_spaces);
+        LineNode *current_node = tails->first;
+        while (current_node != NULL) {
+            Line *head = line_init(lead_spaces);
+            Line *with_run = line_concat(head, runs->first->line);
+            Line *with_tail = line_concat(with_run, current_node->line);
+            linelist_append(segments, with_tail);
+            line_free(head);
+            line_free(with_run);
+            current_node = current_node->next;
+        }
+        // TODO free stuff?
+    }
+
+    return segments;
 }
 
 LineList *get_valid_lines(int *hint, int hint_size, int dim) {
@@ -185,49 +239,75 @@ LineList *get_valid_lines(int *hint, int hint_size, int dim) {
         return valid_lines;
     }
 
-    Line *blocks[hint_size];
-    int i, j, start_pos = 0;
+    LineList *runs = linelist_init();
+    int i, hint_sum = 0;
     for (i = 0; i < hint_size; i++) {
-        blocks[i] = line_init(dim);
-        for (j = 0; j < hint[i]; j++)
-            line_set_filled(blocks[i], j + start_pos);
-        start_pos += hint[i] + 1;
+        hint_sum += hint[i];
+        Line *run = line_init(hint[i]);
+        line_compliment(run);
+        linelist_append(runs, run);
     }
     
-    long iteration = 0;
-    bool done = false;
-    while (!done) {
-        Line *together = line_init(dim);
-        int base_shift = 0;
-        for (i = 0; i < hint_size; i++) {
-            Line *shifted_block = blocks[i]; // TODO make this a deep copy
-            int shift = base_shift + (iteration / ipow(hint_size, hint_size - i - 1)) % hint_size;
-            for (j = 0; j < shift; j++)
-                line_shift_right(shifted_block);
-            base_shift = shift;
-            line_or(together, shifted_block);
-        }
-        linelist_append(valid_lines, together);
-        iteration++;
-        done = (iteration == 4);
+    valid_lines = generate_segments(runs, hint_size, dim + 1 - hint_sum);
+    // Get rid of extra space at the beginning of each line
+    LineNode *current_node = valid_lines->first;
+    while (current_node != NULL) {
+        Line *old_line = current_node->line;
+        Line *new_line = line_init(dim);
+        line_shift_left(old_line);
+        line_or(new_line, old_line);
+        current_node->line = new_line;
+        line_free(old_line);
+        current_node = current_node->next;
     }
     
-    for (i = 0; i < hint_size; i++) {
-        line_free(blocks[i]);
-    }
-
     return valid_lines;
 }
 
 /* === MAIN === */
 
 int main() {
+
     int hint_length = 3;
     int *hint = malloc(hint_length * sizeof(int));
     hint[0] = 1;
     hint[1] = 2;
     hint[2] = 44;
-    linelist_print(get_valid_lines(hint, hint_length, 50));
+    LineList *valid_lines = get_valid_lines(hint, hint_length, 50);
+    linelist_print(valid_lines);
+    // line_shift_left(valid_lines->first->line);
+    // line_print(valid_lines->first->line);
+    
+    /*
+    LineList *runs = linelist_init();
+    Line *run1 = line_init(50);
+    Line *run2 = line_init(1);
+    line_compliment(run1);
+    line_compliment(run2);
+    linelist_append(runs, run1);
+    linelist_append(runs, run2);
+    linelist_print(generate_segments(runs, 2, 3));
+    */
+
+    /*
+    Line *run = line_init(2);
+    Line *tail = line_init(2);
+    line_set_filled(tail, 1);
+    line_compliment(run);
+    printf("%" PRIu32 "\n", run->words[0]);
+    Line *head = line_init(3);
+    Line *with_run = line_concat(head, run);
+    Line *with_tail = line_concat(with_run, head);
+    // line_print(with_tail);
+    
+    word_t *w = malloc(sizeof(word_t));
+    w[0] = 0;
+    w[0] = ~w[0];
+    w[0] &= ~(~0 << 1);
+    // printf("%" PRIu32 "\n", w[0]);
+    */
+
+    printf("\n");
 
     return 0;
 }
