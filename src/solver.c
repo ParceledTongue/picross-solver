@@ -329,27 +329,31 @@ CommonInfo *get_common(LineList *lines, int dim) {
 
 int reduce(LineList **a, int a_size, LineList **b, int b_size) {
     int i, j, num_removed = 0;
+    bool failed = false;
 
-    for (i = 0; i < a_size; i++) {
+    for (i = 0; i < a_size &&! failed; i++) {
         CommonInfo *info = get_common(a[i], b_size);
         # pragma omp parallel for reduction(+:num_removed)
         for (j = 0; j < b_size; j++) {
-            LineNode *current_node = b[j]->first;
-            while (current_node != NULL) {
-                LineNode *next_node = current_node->next;
-                if ((line_get(info->common_filled, j) && !line_get(current_node->line, i)) || (!line_get(info->common_empty, j) && line_get(current_node->line, i))) {
-                    linelist_remove(b[j], current_node);
-                    num_removed++;
+            # pragma omp flush(failed)
+            if (!failed) {
+                LineNode *current_node = b[j]->first;
+                while (current_node != NULL) {
+                    LineNode *next_node = current_node->next;
+                    if ((line_get(info->common_filled, j) && !line_get(current_node->line, i)) || (!line_get(info->common_empty, j) && line_get(current_node->line, i))) {
+                        linelist_remove(b[j], current_node);
+                        num_removed++;
+                    }
+                    current_node = next_node;
                 }
-                current_node = next_node;
+                if (b[j]->first == NULL)
+                    failed = true; // no solution
             }
-            if (b[j]->first == NULL)
-                return -1; // no solution
         }
         commoninfo_free(info);
     }
 
-    return num_removed;
+    return failed ? -1 : num_removed;
 }
 
 int reduce_mutual(Board *board) {
@@ -452,14 +456,18 @@ int main(int argc, char *argv[]) {
    
     clock_t start = clock();
     // calculate and store all permutations for each line
-    int i, index;
-    # pragma omp parallel for
+    int i, index, nthreads;
+    # pragma omp parallel
+    {
+    printf("Calculating permutations on %d threads.\n", omp_get_num_threads());
+    # pragma omp for
     for (i = 0; i < hints->num_rows + hints->num_cols; i++) {
         index = (i < hints->num_rows) ? i : i - hints->num_rows;
         if (i < hints->num_rows)
             board->row_lists[index] = get_valid_lines(hints->row_hints[index]->hint, hints->row_hints[index]->size, hints->num_cols);
         else
             board->col_lists[index] = get_valid_lines(hints->col_hints[index]->hint, hints->col_hints[index]->size, hints->num_rows);
+    }
     }
     clock_t permutation_finish = clock();
     
