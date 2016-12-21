@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 typedef uint32_t word_t;
 int BITS_PER_WORD = sizeof(word_t) * 8;
@@ -212,18 +213,6 @@ void linelist_free(LineList *linelist) {
 
 /* === BOARD MANIPULATION AND ACCESS === */
 
-/*
-void board_init_row_list(Board *board, int row, LineList *row_list) {
-    LineList *cp = &board->row_lists[row];
-    cp = row_list;
-}
-
-void board_init_col_list(Board *board, int col, LineList *col_list) {
-    LineList *cp = &board->col_lists[col];
-    cp = col_list;
-}
-*/
-
 Board *board_init(int num_rows, int num_cols) {
     Board *board = malloc(sizeof(Board));
     board->num_rows = num_rows;
@@ -246,9 +235,7 @@ void board_free(Board *board) {
 
 /* === FIND ALL POSSIBLE SOLUTIONS FOR GIVEN HINT === */
 
-LineList *generate_segments(LineList *runs, int runs_size, int spaces) {
-    // printf("runs_size = %d, spaces = %d\n", runs_size, spaces);
-    
+LineList *generate_segments(LineNode *first_run, int runs_size, int spaces) {
     LineList *segments = linelist_init();
     
     if (runs_size == 0) {
@@ -258,21 +245,18 @@ LineList *generate_segments(LineList *runs, int runs_size, int spaces) {
 
     int lead_spaces;
     for (lead_spaces = 1; lead_spaces <= spaces - runs_size + 1; lead_spaces++) {
-        LineList *reduced_runs = linelist_init();
-        reduced_runs->first = runs->first->next;
-        reduced_runs->last = (runs_size == 1) ? NULL : runs->last;
-        LineList *tails = generate_segments(reduced_runs, runs_size - 1, spaces - lead_spaces);
+        LineList *tails = generate_segments(first_run->next, runs_size - 1, spaces - lead_spaces);
+        // TODO free reduced_runs
         LineNode *current_node = tails->first;
         while (current_node != NULL) {
             Line *head = line_init(lead_spaces);
-            Line *with_run = line_concat(head, runs->first->line);
+            Line *with_run = line_concat(head, first_run->line);
             Line *with_tail = line_concat(with_run, current_node->line);
             linelist_append(segments, with_tail);
             line_free(head);
             line_free(with_run);
             current_node = current_node->next;
         }
-        // TODO free stuff?
     }
 
     return segments;
@@ -295,7 +279,7 @@ LineList *get_valid_lines(int *hint, int hint_size, int dim) {
         linelist_append(runs, run);
     }
     
-    valid_lines = generate_segments(runs, hint_size, dim + 1 - hint_sum);
+    valid_lines = generate_segments(runs->first, hint_size, dim + 1 - hint_sum);
     // Get rid of extra space at the beginning of each line
     LineNode *current_node = valid_lines->first;
     while (current_node != NULL) {
@@ -454,10 +438,19 @@ Hints *read_hints(const char *filepath) {
 
 /* === MAIN === */
 
-int main() {
-    Hints *hints = read_hints("duck.txt");
+int main(int argc, char *argv[]) {
+    if (argc > 2) {
+        printf("Too many arguments supplied.\n");
+        return -1;
+    } else if (argc < 2) {
+        printf("Argument expected.\n");
+        return -1;
+    }
+
+    Hints *hints = read_hints(argv[1]);
     Board *board = board_init(hints->num_rows, hints->num_cols);
    
+    clock_t start = clock();
     // calculate and store all permutations for each line
     int i, index;
     # pragma omp parallel for
@@ -468,6 +461,7 @@ int main() {
         else
             board->col_lists[index] = get_valid_lines(hints->col_hints[index]->hint, hints->col_hints[index]->size, hints->num_rows);
     }
+    clock_t permutation_finish = clock();
     
     // main loop
     int total_changed;
@@ -475,57 +469,20 @@ int main() {
         total_changed = reduce_mutual(board);
         if (total_changed == -1) {
             printf("Failed to find a solution.\n");
-            return;
+            return -1;
         }
     } while (total_changed > 0);
+    clock_t solve_finish = clock();
 
     for (i = 0; i < board->num_rows; i++) {
         line_print(board->row_lists[i]->first->line);
         printf("\n");
     }
-
-    /*
-    int hint_length = 2;
-    int *hint = malloc(hint_length * sizeof(int));
-    hint[0] = 2;
-    hint[1] = 2;
-    LineList *valid_lines = get_valid_lines(hint, hint_length, 5);
-    CommonInfo *info = get_common(valid_lines, 5);
-    line_print(info->common_empty);
-    */
     
-    /*
-    LineList *runs = linelist_init();
-    Line *run1 = line_init(50);
-    Line *run2 = line_init(1);
-    line_compliment(run1);
-    line_compliment(run2);
-    linelist_append(runs, run1);
-    linelist_append(runs, run2);
-    linelist_print(generate_segments(runs, 2, 3));
-    */
 
-    /*
-    Line *run = line_init(2);
-    Line *tail = line_init(2);
-    line_set_filled(tail, 1);
-    line_compliment(run);
-    printf("%" PRIu32 "\n", run->words[0]);
-    Line *head = line_init(3);
-    Line *with_run = line_concat(head, run);
-    Line *with_tail = line_concat(with_run, head);
-    // line_print(with_tail);
-    
-    word_t *w = malloc(sizeof(word_t));
-    w[0] = 0;
-    w[0] = ~w[0];
-    w[0] &= ~(~0 << 1);
-    // printf("%" PRIu32 "\n", w[0]);
-    */
-   
     hints_free(hints);
     board_free(board);
-    printf("\n");
+    printf("%f seconds to calculate permutations.\n%f seconds to find the solution.\n%f seconds total.\n\n", (double)(permutation_finish - start) / CLOCKS_PER_SEC, (double)(solve_finish - permutation_finish) / CLOCKS_PER_SEC, (double)(solve_finish - start) / CLOCKS_PER_SEC);
 
     return 0;
 }

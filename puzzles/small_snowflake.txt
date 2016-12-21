@@ -1,0 +1,36 @@
+11 11
+
+NOTE: This puzzle will appear to be solved in the output, but that's a bug.
+The program will need additional logic to handle it.
+
+---
+
+1 1
+1 1 1 1
+2 1 2
+1 1 1
+2 3 2
+
+3 3
+2 3 2
+1 1 1
+2 1 2
+1 1 1 1
+
+1 1
+
+---
+
+1 1
+1 1 1 1
+2 1 2
+1 1 1
+2 3 2
+
+3 3
+2 3 2
+1 1 1
+2 1 2
+1 1 1 1
+
+1 1
