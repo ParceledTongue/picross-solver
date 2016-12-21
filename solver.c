@@ -455,42 +455,20 @@ Hints *read_hints(const char *filepath) {
 /* === MAIN === */
 
 int main() {
-    // Hints *h = hints_init(5, 5);
-    // hints_free(h);
-
     Hints *hints = read_hints("duck.txt");
-
-    printf("%d\n", hints->col_hints[13]->hint[1]);
-
-    Board *board = board_init(3, 3);
+    Board *board = board_init(hints->num_rows, hints->num_cols);
+   
+    // calculate and store all permutations for each line
+    int i, index;
+    # pragma omp parallel for
+    for (i = 0; i < hints->num_rows + hints->num_cols; i++) {
+        index = (i < hints->num_rows) ? i : i - hints->num_rows;
+        if (i < hints->num_rows)
+            board->row_lists[index] = get_valid_lines(hints->row_hints[index]->hint, hints->row_hints[index]->size, hints->num_cols);
+        else
+            board->col_lists[index] = get_valid_lines(hints->col_hints[index]->hint, hints->col_hints[index]->size, hints->num_rows);
+    }
     
-    int hint_length = 1;
-    int *hint1, *hint2, *hint3, *hint4, *hint5, *hint6;
-    
-    hint1 = malloc(hint_length * sizeof(int));
-    hint1[0] = 2;
-    board->row_lists[0] = get_valid_lines(hint1, hint_length, 3);
-
-    hint2 = malloc(hint_length * sizeof(int));
-    hint2[0] = 1;
-    board->row_lists[1] = get_valid_lines(hint2, hint_length, 3);
-
-    hint3 = malloc(hint_length * sizeof(int));
-    hint3[0] = 1;
-    board->row_lists[2] = get_valid_lines(hint3, hint_length, 3);
-
-    hint4 = malloc(hint_length * sizeof(int));
-    hint4[0] = 0;
-    board->col_lists[0] = get_valid_lines(hint4, hint_length, 3);
-
-    hint5 = malloc(hint_length * sizeof(int));
-    hint5[0] = 1;
-    board->col_lists[1] = get_valid_lines(hint5, hint_length, 3);
-
-    hint6 = malloc(hint_length * sizeof(int));
-    hint6[0] = 3;
-    board->col_lists[2] = get_valid_lines(hint6, hint_length, 3);
-
     // main loop
     int total_changed;
     do {
@@ -501,7 +479,6 @@ int main() {
         }
     } while (total_changed > 0);
 
-    int i;
     for (i = 0; i < board->num_rows; i++) {
         line_print(board->row_lists[i]->first->line);
         printf("\n");
