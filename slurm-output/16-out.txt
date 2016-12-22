@@ -1,0 +1,53 @@
+16 cores available
+mkdir -p bin
+gcc -o bin/solver src/solver.c -fopenmp
+Thread 0 worked for 1.484314 seconds on 5 iterations.
+Thread 1 worked for 1.227775 seconds on 11 iterations.
+Thread 2 worked for 1.500520 seconds on 2 iterations.
+Thread 3 worked for 2.011021 seconds on 1 iterations.
+Thread 4 worked for 1.266400 seconds on 15 iterations.
+Thread 5 worked for 1.553334 seconds on 4 iterations.
+Thread 6 worked for 1.576589 seconds on 2 iterations.
+Thread 7 worked for 1.567187 seconds on 1 iterations.
+Thread 8 worked for 1.333683 seconds on 3 iterations.
+Thread 9 worked for 1.809695 seconds on 2 iterations.
+Thread 10 worked for 1.567223 seconds on 2 iterations.
+Thread 11 worked for 1.243460 seconds on 9 iterations.
+Thread 12 worked for 1.236141 seconds on 3 iterations.
+Thread 13 worked for 1.811136 seconds on 2 iterations.
+Thread 14 worked for 1.461340 seconds on 1 iterations.
+Thread 15 worked for 1.381006 seconds on 2 iterations.
+. . . . . # # # # . . . . . . . . . . . . . . . . . . . . . . . . . . 
+. . . . # # # . # # . . . . . . . . . . . . # # # # . . . . . . . . . 
+. . . # # # # # # # # . . . . . . . . . . # # # # # # . . . . . . . . 
+. . . # # # # # # . . . . . . . . . . . # # # # . # # # . . . . . . . 
+. . # # # # # # # . . . . . . . . . . . # # # # # # # . . . . . . . . 
+. . # # # # # # # # . . . . . . . . . . # # # # # # . . . . . . . . . 
+. . # # # # # # # # . . . . . . . . . # # # # # # # # . . . . . . . . 
+. . # # # . # # # # . . . . . . . . . # # . # # # # # . . . . . . . . 
+. # # # . # . # # # # . . . . . . . . # . # . # # # # . . . . . . . . 
+. # # # # . # . # # # . . . . . . . # # # . # # # # # # . . . . . . . 
+. # # # . # . # . # # . . . . # . . # # . # . # # # # # . . . . # # # 
+. # # . # . # . # # # . . . # # . . # # # . # # # # # # . . . # # # . 
+. . # # . # # # . # # . . # # # . . # # . # # # . # # # . . # # . # . 
+. . # # # . # # # # # . . # # # # . # . # . # # . # # . . # # # . # . 
+. . . # # # # # # # # . . # . # # . # # . # # . # # # . # # # . # # . 
+. . . # # # . # # # . . # # . # # . # . # . # . # # # . # # . # # . . 
+. . . . # # # . # # . . # # # # . . # # . # . # # # . . # . # # # . . 
+. . . . # # # . # # . . # # # . . . . # # . # . # # . # # # # # . . . 
+. . . . . # # # . # . . # . . . . # . # # # # # # . # # . . . . # # # 
+. . . . . . # # . # . . . # # # # # . # . # . # # . # # # # # . . . . 
+. . . . # # # # # . # # # # # # # . . # # . # # . . # # . # # # # . . 
+. . # # # # . # # . # # # . . . . . . . # # # . . . . # # . . # # . . 
+# # # # # . # . # # . . . . . . . . . . # # . . . . . # # # # . # # . 
+# # # . . . # # . # . . . . . . . . . . # # # . . . . . # # # # # # . 
+. . . . . . # # . # # . . . . . . . . . # # # . . . . . . . . # # # . 
+. . . . . . # # . . # . . . . . . . . # # # # . . . . . . . . . . . . 
+. . . . . . # # . . # # . . . . . . . # # . # . . . . . . . . . . . . 
+. . . . . . # . . . . # . . . . . . # # . # # . . . . . . . . . . . . 
+. . . . . . # . . . . . . . . . . . # # . # # . . . . . . . . . . . . 
+. . . . . . # . . . . . . . . . . # # . . . # . . . . . . . . . . . . 
+2.011794 seconds to calculate permutations.
+0.370908 seconds to find the solution.
+2.382702 seconds total.
+
