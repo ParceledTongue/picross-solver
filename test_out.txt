@@ -1,8 +1,0 @@
-5 cores available
-gcc -o bin/solver src/solver.c
-/usr/bin/ld: cannot open output file bin/solver: No such file or directory
-collect2: ld returned 1 exit status
-make: *** [picrossmake] Error 1
-makefile
-puzzles
-src
