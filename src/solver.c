@@ -8,12 +8,12 @@
 
 #include <ctype.h>
 #include <inttypes.h>
+#include <omp.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 typedef uint32_t word_t;
 int BITS_PER_WORD = sizeof(word_t) * 8;
@@ -454,27 +454,27 @@ int main(int argc, char *argv[]) {
     Hints *hints = read_hints(argv[1]);
     Board *board = board_init(hints->num_rows, hints->num_cols);
    
-    clock_t start = clock();
+    double start_time = omp_get_wtime();
     // calculate and store all permutations for each line
     int i, nthreads;
-    int ticks[4] = {0};
+    double time[4] = {0};
     int iterations[4] = {0};
     # pragma omp parallel for num_threads(4) schedule(dynamic, 4)
     for (i = 0; i < hints->num_rows + hints->num_cols; i++) {
-        clock_t line_start = clock();
+        double line_start_time = omp_get_wtime();
         int index = (i < hints->num_rows) ? i : i - hints->num_rows;
         if (i < hints->num_rows)
             board->row_lists[index] = get_valid_lines(hints->row_hints[index]->hint, hints->row_hints[index]->size, hints->num_cols);
         else
             board->col_lists[index] = get_valid_lines(hints->col_hints[index]->hint, hints->col_hints[index]->size, hints->num_rows);
-        clock_t line_finish = clock();
-        ticks[omp_get_thread_num()] += line_finish - line_start;
+        double line_finish_time = omp_get_wtime();
+        time[omp_get_thread_num()] += line_finish_time - line_start_time;
         iterations[omp_get_thread_num()]++;
     }
     for (i = 0; i < 4; i++) {
-        printf("Thread %d worked for %f seconds on %d iterations.\n", i, (double)ticks[i] / CLOCKS_PER_SEC, iterations[i]);
+        printf("Thread %d worked for %f seconds on %d iterations.\n", i, time[i], iterations[i]);
     }
-    clock_t permutation_finish = clock();
+    double permutation_finish_time = omp_get_wtime();
     
     // main loop
     int total_changed;
@@ -485,7 +485,7 @@ int main(int argc, char *argv[]) {
             return -1;
         }
     } while (total_changed > 0);
-    clock_t solve_finish = clock();
+    double solve_finish_time = omp_get_wtime();
 
     for (i = 0; i < board->num_rows; i++) {
         line_print(board->row_lists[i]->first->line);
@@ -495,7 +495,7 @@ int main(int argc, char *argv[]) {
 
     hints_free(hints);
     board_free(board);
-    printf("%f seconds to calculate permutations.\n%f seconds to find the solution.\n%f seconds total.\n\n", (double)(permutation_finish - start) / CLOCKS_PER_SEC, (double)(solve_finish - permutation_finish) / CLOCKS_PER_SEC, (double)(solve_finish - start) / CLOCKS_PER_SEC);
+    printf("%f seconds to calculate permutations.\n%f seconds to find the solution.\n%f seconds total.\n\n", permutation_finish_time - start_time, solve_finish_time - permutation_finish_time, solve_finish_time - start_time);
 
     return 0;
 }
