@@ -27,7 +27,7 @@ For example, this puzzle
     1 1   # . . #
       4   # # # #
 
-can be represented by this file:i
+can be represented by this file:
 
 ```
 5 4
