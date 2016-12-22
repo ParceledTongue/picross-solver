@@ -333,7 +333,7 @@ int reduce(LineList **a, int a_size, LineList **b, int b_size) {
 
     for (i = 0; i < a_size &&! failed; i++) {
         CommonInfo *info = get_common(a[i], b_size);
-        # pragma omp parallel for reduction(+:num_removed)
+        # pragma omp parallel for reduction(+:num_removed) schedule(dynamic)
         for (j = 0; j < b_size; j++) {
             # pragma omp flush(failed)
             if (!failed) {
@@ -456,10 +456,12 @@ int main(int argc, char *argv[]) {
    
     double start_time = omp_get_wtime();
     // calculate and store all permutations for each line
-    int i, nthreads;
-    double time[4] = {0};
-    int iterations[4] = {0};
-    # pragma omp parallel for num_threads(4) schedule(dynamic, 4)
+    int i, nthread, maxthreads = omp_get_max_threads();
+    double *time = malloc(maxthreads * sizeof(double));
+    int *iterations = malloc(maxthreads * sizeof(int));
+    memset(time, 0, maxthreads * sizeof(double));
+    memset(iterations, 0, maxthreads * sizeof(int));
+    # pragma omp parallel for reduction(max:nthread) schedule(dynamic)
     for (i = 0; i < hints->num_rows + hints->num_cols; i++) {
         double line_start_time = omp_get_wtime();
         int index = (i < hints->num_rows) ? i : i - hints->num_rows;
@@ -468,12 +470,15 @@ int main(int argc, char *argv[]) {
         else
             board->col_lists[index] = get_valid_lines(hints->col_hints[index]->hint, hints->col_hints[index]->size, hints->num_rows);
         double line_finish_time = omp_get_wtime();
-        time[omp_get_thread_num()] += line_finish_time - line_start_time;
-        iterations[omp_get_thread_num()]++;
+        nthread = omp_get_thread_num();
+        time[nthread] += line_finish_time - line_start_time;
+        iterations[nthread]++;
     }
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < nthread; i++) {
         printf("Thread %d worked for %f seconds on %d iterations.\n", i, time[i], iterations[i]);
     }
+    free(time);
+    free(iterations);
     double permutation_finish_time = omp_get_wtime();
     
     // main loop
