@@ -474,7 +474,7 @@ int main(int argc, char *argv[]) {
         time[nthread] += line_finish_time - line_start_time;
         iterations[nthread]++;
     }
-    for (i = 0; i < nthread; i++) {
+    for (i = 0; i <= nthread; i++) {
         printf("Thread %d worked for %f seconds on %d iterations.\n", i, time[i], iterations[i]);
     }
     free(time);
