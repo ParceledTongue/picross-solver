@@ -17,17 +17,17 @@ them for formatting).
 
 For example, this puzzle
 
-                  1
-                  1 1
-              5 2 1 3
+              1
+              1 1
+          5 2 1 3
 
-          4   # # # #
-          1   # . . .
-        1 2   # . # #
-        1 1   # . . #
-          4   # # # #
+      4   # # # #
+      1   # . . .
+    1 2   # . # #
+    1 1   # . . #
+      4   # # # #
 
-can be represented by the following file:
+can be represented by this file:i
 
 ```
 5 4
