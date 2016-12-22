@@ -454,14 +454,14 @@ int main(int argc, char *argv[]) {
     Hints *hints = read_hints(argv[1]);
     Board *board = board_init(hints->num_rows, hints->num_cols);
    
-    double start_time = omp_get_wtime();
     // calculate and store all permutations for each line
-    int i, nthread, maxthreads = omp_get_max_threads();
-    double *time = malloc(maxthreads * sizeof(double));
-    int *iterations = malloc(maxthreads * sizeof(int));
-    memset(time, 0, maxthreads * sizeof(double));
-    memset(iterations, 0, maxthreads * sizeof(int));
-    # pragma omp parallel for reduction(max:nthread) schedule(dynamic)
+    double start_time = omp_get_wtime();
+    int i, max_threads = omp_get_max_threads();
+    double *time = malloc(max_threads * sizeof(double));
+    int *iterations = malloc(max_threads * sizeof(int));
+    memset(time, 0, max_threads * sizeof(double));
+    memset(iterations, 0, max_threads * sizeof(int));
+    # pragma omp parallel for schedule(dynamic)
     for (i = 0; i < hints->num_rows + hints->num_cols; i++) {
         double line_start_time = omp_get_wtime();
         int index = (i < hints->num_rows) ? i : i - hints->num_rows;
@@ -470,11 +470,11 @@ int main(int argc, char *argv[]) {
         else
             board->col_lists[index] = get_valid_lines(hints->col_hints[index]->hint, hints->col_hints[index]->size, hints->num_rows);
         double line_finish_time = omp_get_wtime();
-        nthread = omp_get_thread_num();
-        time[nthread] += line_finish_time - line_start_time;
-        iterations[nthread]++;
+        time[omp_get_thread_num()] += line_finish_time - line_start_time;
+        iterations[omp_get_thread_num()]++;
     }
-    for (i = 0; i <= nthread; i++) {
+    for (i = 0; i <= max_threads; i++) {
+        if (iterations[i] == 0) break;
         printf("Thread %d worked for %f seconds on %d iterations.\n", i, time[i], iterations[i]);
     }
     free(time);
