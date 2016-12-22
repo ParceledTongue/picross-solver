@@ -456,18 +456,23 @@ int main(int argc, char *argv[]) {
    
     clock_t start = clock();
     // calculate and store all permutations for each line
-    int i, index, nthreads;
-    # pragma omp parallel
-    {
-    printf("Calculating permutations on %d threads.\n", omp_get_num_threads());
-    # pragma omp for
+    int i, nthreads;
+    int ticks[4] = {0};
+    int iterations[4] = {0};
+    # pragma omp parallel for num_threads(4) schedule(dynamic, 4)
     for (i = 0; i < hints->num_rows + hints->num_cols; i++) {
-        index = (i < hints->num_rows) ? i : i - hints->num_rows;
+        clock_t line_start = clock();
+        int index = (i < hints->num_rows) ? i : i - hints->num_rows;
         if (i < hints->num_rows)
             board->row_lists[index] = get_valid_lines(hints->row_hints[index]->hint, hints->row_hints[index]->size, hints->num_cols);
         else
             board->col_lists[index] = get_valid_lines(hints->col_hints[index]->hint, hints->col_hints[index]->size, hints->num_rows);
+        clock_t line_finish = clock();
+        ticks[omp_get_thread_num()] += line_finish - line_start;
+        iterations[omp_get_thread_num()]++;
     }
+    for (i = 0; i < 4; i++) {
+        printf("Thread %d worked for %f seconds on %d iterations.\n", i, (double)ticks[i] / CLOCKS_PER_SEC, iterations[i]);
     }
     clock_t permutation_finish = clock();
     
