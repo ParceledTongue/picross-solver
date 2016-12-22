@@ -1,2 +1,2 @@
-picrossmake: solver.c
-	gcc -o bin/solver solver.c
+picrossmake: src/solver.c
+	gcc -o bin/solver src/solver.c
