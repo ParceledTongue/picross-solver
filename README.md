@@ -99,7 +99,7 @@ Future Goals
   address this first before tackling any other goals.
 
 - I want to implement certain elements of the Python implemenation
-  (here)[rosettacode.org/wiki/Nonogram_solver#Python], namely:
+  [here](rosettacode.org/wiki/Nonogram_solver#Python), namely:
     * The ability to solve puzzles not tractable via the reduction strategy
       employed now.
     * The ability to determine whether a puzzle's solution is unique.
