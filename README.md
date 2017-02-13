@@ -83,7 +83,7 @@ row and each column has its own `LineList` which holds every potential line
 configuration for that row or column at each step of the algorithm.
 
 ### `Hint`
-Represents a hint for a single row or column, i.e. `6 3 2`.
+Represents a hint for a single row or column, e.g. `6 3 2`.
 
 ### `Hints`
 Somewhat confusingly named, but this just holds all the hints for a given
