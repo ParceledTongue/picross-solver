@@ -43,9 +43,9 @@ can be represented by this file:
 ---
 
 5
-2
+1 1
 1 1 1
-3
+1 3
 
 The line breaks and dashes are ignored. So is this!
 ```
