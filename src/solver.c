@@ -18,9 +18,6 @@
 typedef uint32_t word_t;
 int BITS_PER_WORD = sizeof(word_t) * 8;
 
-int PUZZLE_HEIGHT = 10;
-int PUZZLE_WIDTH = 10;
-
 typedef struct {
     word_t *words;
     int size;
