@@ -47,7 +47,7 @@ can be represented by this file:
 1 1 1
 1 3
 
-The line breaks and dashes are ignored. So is this!
+The empty lines and dashes are ignored. So is this!
 ```
 
 
